@@ -169,4 +169,4 @@ https://github.com/Dozed12/df-style-worldgen.git
 
 ---------------------------------------------------
 
-Enjoy the void. The dot awaits.
+Enjoy the v01d.
