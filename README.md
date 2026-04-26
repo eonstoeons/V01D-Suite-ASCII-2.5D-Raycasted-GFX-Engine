@@ -1,14 +1,9 @@
-# V01D-Suite & ASCII-2.5D-Raycasted-GFX-Engine
-A single-file Python suite with two 2.5D ASCII raycast engines, an AI code generator, offline chatbot, games, IDE, TTS studio, and a full game-building SDK — all embedded. Zero dependencies. Build, play, create.
+# V01D Engine 0.3 Alpha
 
---------------------------------------------------------------------------------------------------------------------------------------------------
-
-# V01D Suite 0.2 Alpha
-
-**“ONE FILE. EVERY APP.”**
+**“ONE FILE. EVERY APP. FOREVER.”**
 
 A single Python file containing the entire V01D ecosystem:
-12 fully-preserved apps, two real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, an AI code generator,
+17 fully-preserved apps, two real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, an AI code generator,
 an injectible "PyCart / json-cart" system, and a complete SDK for building your own games and tools.
 
 Database updated with open source knowledge base compiled by Claude AI, as well as a number of public
@@ -74,6 +69,9 @@ That’s it. No pip, no virtualenv, no downloads. Everything is embedded.
 
 All apps are stored as “PyCarts” – base64‑encoded Python scripts in JSON cartridges.
 You can create, export, import, and share `.pycart.json` files. The SDK launcher auto‑discovers all carts in `~/v01d_workspace/carts/`.
+
+New additions in 0.3: Scene Chain, Minigame Harness, IDE, Workshop
+
 
 ---
 
@@ -169,4 +167,4 @@ https://github.com/Dozed12/df-style-worldgen.git
 
 ---------------------------------------------------
 
-Enjoy the v01d.
+Enjoy the void.
