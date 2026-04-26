@@ -5,7 +5,7 @@ A single-file Python suite with two 2.5D ASCII raycast engines, an AI code gener
 
 # V01D Suite 0.2 Alpha
 
-**“ONE FILE. EVERY APP. FOREVER.”**
+**“ONE FILE. EVERY APP.”**
 
 A single Python file containing the entire V01D ecosystem:
 12 fully-preserved apps, two real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, an AI code generator,
