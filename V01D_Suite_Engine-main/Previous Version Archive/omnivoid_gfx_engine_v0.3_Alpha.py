@@ -2330,7 +2330,7 @@ class Game:
                     e.speed=ENEMY_SPD.get(e.char,.02)*speed_mult; e.update(P.cv,P.router)
                 self._check_entity_events()
                 if self.combat and P.cv.health<=0:
-                    self._respawn_foot()
+                    self._death_to_space()
                 P.particles.update(); P.pu_spawner.update()
                 if self.frame%40==0:
                     alive=sum(1 for e in P.entities if e.alive())
@@ -2362,6 +2362,15 @@ class Game:
             if P.craft.thruster_on and self.frame%25==0: self.audio.play('thruster')
             self.audio.music.set_mode('space')
         self.msg_t=max(0.,self.msg_t-dt)
+        # Auto-regen health and shield every frame (combat and peaceful)
+        if m in (P.FOOT, P.BOARD, P.VEHICLE):
+            cam=P.cv
+            if cam.health < cam.max_health: cam.health=min(cam.max_health, cam.health+0.04)
+            if cam.shield < cam.max_shield: cam.shield=min(cam.max_shield, cam.shield+0.08)
+        elif m==P.SPACE:
+            cam=P.craft
+            if cam.health < cam.max_health: cam.health=min(cam.max_health, cam.health+0.06)
+            if cam.shield < cam.max_shield: cam.shield=min(cam.max_shield, cam.shield+0.10)
 
     def _update_foot(self, dt):
         P=self.player; cam=P.cv; router=P.router
@@ -2472,7 +2481,7 @@ class Game:
                         and e.attack_cd<9999
                         and math.hypot(e.x-P.cv.pos.x,e.y-P.cv.pos.y)<1.2):
                     if P.cv.take_damage(e.dmg//4):
-                        self._respawn_foot()
+                        self._death_to_space()
 
     def _respawn_foot(self):
         P=self.player
@@ -2487,6 +2496,15 @@ class Game:
             ox,oy = P._open_spawn(P.router)
         P.cv.pos=V2(ox,oy); P.cv.health=P.cv.max_health; P.cv.shield=P.cv.max_shield
         P.heat=0.; self._show_msg(">>> DOWN \u2014 RESPAWNING AT CHECKPOINT"); self.audio.play('death')
+
+    def _death_to_space(self):
+        """Combat death: eject player to outer space, reset hp/shield."""
+        P=self.player
+        P.takeoff()
+        P.cv.health=P.cv.max_health; P.cv.shield=P.cv.max_shield
+        P.craft.health=P.craft.max_health; P.craft.shield=P.craft.max_shield
+        P.heat=0.
+        self._show_msg(">>> YOU DIED \u2014 EJECTED TO SPACE"); self.audio.play('death')
 
     def _update_vehicle(self, dt):
         P=self.player; throttle=brake=steer=0.; boost=False
@@ -2638,6 +2656,7 @@ def main():
 
 if __name__=="__main__":
     main()
+
 
 
 
