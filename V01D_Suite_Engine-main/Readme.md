@@ -3,7 +3,7 @@
 **“ONE FILE. EVERY APP. FOREVER.”**
 
 A single Python file containing the entire V01D ecosystem:
-12 fully-preserved apps (src folder), FOUR real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, coding tool,
+12 fully-preserved apps (src folder), FOUR real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines - all with infinite procedural generation, an IDE, coding tool,
 an injectible "PyCart / json-cart" system, creative and utility apps such as Pyamby and Pysplore, and much more.
 
 Database updated with open source knowledge base compiled by Claude AI, as well as a number of public
