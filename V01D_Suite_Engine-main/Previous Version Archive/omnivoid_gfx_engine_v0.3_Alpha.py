@@ -125,7 +125,72 @@ LOG_ENTRIES = [
     "There are more possible chess games than atoms in the observable universe. Most will never be played.",
     "The mitochondria in your cells have their own separate DNA, remnants of an ancient bacterium never released.",
     "Language shapes thought. The Hopi language has no tense for past or future.",
+    "A city is a machine for living in.\nBut the machine has forgotten its purpose.\nNow it just runs.",
+    "Every light in every window\nis someone deciding something.\nYou will never know what.",
+    "The grid beneath the city\npredates the city.\nThe city is just the grid\nlearning to dream.",
+    "Transmission log 447-C: carrier signal intact. Content: unknown. Origin: unknown. Age: unknown.",
+    "They built the roads first.\nThen the buildings came\nto crowd around the roads\nlike they were warmth.",
+    "Speed is the illusion that distance\ndoes not exist.\nYou are still far from everything.",
+    "LOG CORRUPTED\n...\n...\nfragment: '...do not stop the vehicle...'",
+    "No map survives contact with the territory.\nNo territory survives contact with time.",
+    "You are moving through a place\nthat does not know you are there.\nThis is most places.",
+    "The stars are not a ceiling.\nThey are a floor\nyou have not yet learned to walk on.",
+    "Sector 7 clearance log: access revoked. Reason: [REDACTED]. Date: [REDACTED].",
+    "There is no outside.\nEvery outside\nis just a larger inside\nyou have not mapped yet.",
+    "Something followed the vehicle for 3.2 km.\nWhen it stopped, nothing was there.\nThe log ends here.",
+    "Archive entry 0091: the last library burned.\nWhat was saved: everything small.\nWhat was lost: the index.",
+    "Motion is not progress.\nProgress is not arrival.\nArrival is not the end.",
+    "You passed this block before.\nThe block does not remember.\nOnly you remember.\nOnly you.",
+    "Broadcast fragment: '...all units return to base...'\nNo base was ever found.\nAll units kept moving.",
+    "The void between objects\nis not empty.\nIt is full of the absence\nof everything that was there.",
+    "Speed log: maximum recorded 94 mph.\nDriver: unknown.\nDestination: unknown.\nOutcome: pending.",
+    "There is a frequency\nbelow hearing\nthat the city emits at night.\nAnimals know it. You feel it.",
+    "Every road leads somewhere.\nNot every somewhere\nis worth the road.",
+    "Archive node 33: last ping 14 cycles ago.\nContent preserved.\nAccess: open.\nReader count: 1.",
+    "The city breathes at 0.08 Hz.\nOne breath per twelve seconds.\nCount the traffic lights.",
+    "You are a moving point\nin a static grid.\nThe grid does not move for you.\nYou move for the grid.",
+    "Signal decay rate: nominal.\nCarrier integrity: 71%.\nMessage: still transmitting.\nRecipient: still unknown.",
+    "Fragment recovered from sector 12:\n'...the engine never stopped...\n...we just stopped hearing it...'",
 ]
+
+# Procedural log fragment generator — called at runtime for infinite unique entries
+_LOG_SUBJECTS  = ["the signal","the grid","the archive","the void","the road","the city","the engine",
+                  "the frequency","the last broadcast","sector zero","node 7","the carrier wave",
+                  "the pattern","the corridor","the compound","the observer","unit 9","the record"]
+_LOG_VERBS     = ["persists","decays","repeats","shifts","expands","contracts","remembers","forgets",
+                  "returns","departs","calculates","observes","transmits","receives","collapses","endures"]
+_LOG_OBJECTS   = ["without source","beyond the boundary","at unknown intervals","in all directions",
+                  "toward no destination","from the beginning","after the signal ends","in silence",
+                  "with no recipients","through every wall","across every sector","indefinitely"]
+_LOG_CLOSERS   = ["no further data","log ends here","access restricted","content unverified",
+                  "origin unknown","timestamp corrupted","classification: open","filed under: void",
+                  "cross-reference: none","redundancy confirmed","signal strength: trace"]
+
+def _gen_log_entry(seed):
+    """Generate a unique procedural archive log entry from a seed."""
+    r = random.Random(seed)
+    form = r.randint(0, 4)
+    if form == 0:
+        return (f"ARCHIVE FRAGMENT {seed & 0xFFFF:04X}:\n"
+                f"{r.choice(_LOG_SUBJECTS).title()} {r.choice(_LOG_VERBS)} "
+                f"{r.choice(_LOG_OBJECTS)}.\n"
+                f"[{r.choice(_LOG_CLOSERS).upper()}]")
+    elif form == 1:
+        lines = [f"{r.choice(_LOG_SUBJECTS).title()} {r.choice(_LOG_VERBS)}.",
+                 f"It {r.choice(_LOG_VERBS)} {r.choice(_LOG_OBJECTS)}.",
+                 f"{r.choice(_LOG_CLOSERS).capitalize()}."]
+        return "\n".join(lines)
+    elif form == 2:
+        return (f"Log {seed & 0xFFF:03X} / {r.choice(_LOG_SUBJECTS)} / "
+                f"{r.choice(_LOG_VERBS)} / {r.choice(_LOG_OBJECTS)}") 
+    elif form == 3:
+        n = r.randint(2, 4)
+        return "\n".join(f"{r.choice(_LOG_SUBJECTS).title()} {r.choice(_LOG_VERBS)} {r.choice(_LOG_OBJECTS)}."
+                         for _ in range(n))
+    else:
+        return (f"Transmission {seed & 0xFF:02X}-{(seed>>8)&0xFF:02X}:\n"
+                f"'{r.choice(_LOG_SUBJECTS)} {r.choice(_LOG_VERBS)} {r.choice(_LOG_OBJECTS)}.'\n"
+                f"[{r.choice(_LOG_CLOSERS).upper()}]")
 
 # ================================================================ AUDIO BACKEND DETECTION
 
@@ -1025,7 +1090,139 @@ class ArtifactSpawner:
             zi=max(0,min(W-1,sx))
             if tY<zbuf[zi] and 0<=sx<W and 0<=sy<H: buf[sy][sx]=glyph
 
+# ================================================================ WORLD BUBBLE SPAWNER
+
+class WorldBubble:
+    """
+    Grid-based proximity spawner. Divides the world into CELL_SIZE blocks.
+    As the player crosses into a new cell, it rolls a random spawn event:
+    enemies, vehicles, and/or a procedural archive log artifact.
+    Keeps the world fresh and dense without ever re-spawning the same cell twice.
+    """
+    CELL_SIZE   = 8          # world units per bubble cell (~1 city block)
+    MAX_ENT     = 80         # hard cap on live entities
+    MAX_VEH     = 60         # hard cap on vehicles
+    LOG_RADIUS  = 3.5        # pickup radius for bubble log shards
+
+    def __init__(self):
+        self._visited  = set()   # (cx,cy) cells already processed
+        self._log_shards = []    # [(wx,wy,entry_text), ...]  — pickupable log fragments
+        self._log_seed = random.randint(0, 0xFFFFFFFF)
+
+    def reset(self):
+        self._visited.clear()
+        self._log_shards.clear()
+
+    def _cell(self, px, py):
+        return (int(math.floor(px / self.CELL_SIZE)),
+                int(math.floor(py / self.CELL_SIZE)))
+
+    def tick(self, player):
+        """Call once per frame while on foot or in vehicle. Spawns into player lists."""
+        if player.router is None: return
+        px, py, _ = player.pos()
+        cx, cy    = self._cell(px, py)
+
+        # Check a small neighbourhood so fast vehicles don't skip cells
+        for dcx in (-1, 0, 1):
+            for dcy in (-1, 0, 1):
+                key = (cx+dcx, cy+dcy)
+                if key in self._visited: continue
+                self._visited.add(key)
+                self._spawn_cell(player, key)
+
+        # Check log shard pickups
+        self._check_log_pickups(player, px, py)
+
+    def _spawn_cell(self, player, cell_key):
+        cx, cy = cell_key
+        rng    = random.Random(hash((cx, cy, player.planet["seed"] if player.planet else 0)) ^ 0xBEEFCAFE)
+        router = player.router
+        biome  = player.biome
+
+        # World-space centre of this cell
+        wx = cx * self.CELL_SIZE + self.CELL_SIZE / 2
+        wy = cy * self.CELL_SIZE + self.CELL_SIZE / 2
+
+        # ---- Enemy spawn ----
+        if len(player.entities) < self.MAX_ENT:
+            kinds = {
+                DUNGEON: ['Z','D','G','B'],
+                CITY:    ['Z','G','M'],
+                WILDS:   ['G','Z','S'],
+                MOON:    ['D','S'],
+            }.get(biome, ['Z','G'])
+            n_ent = rng.choice([0, 0, 1, 1, 2, 2, 3, 4, 5])   # mostly small bursts
+            for _ in range(n_ent):
+                for _ in range(20):
+                    ex = wx + rng.uniform(-self.CELL_SIZE*.9, self.CELL_SIZE*.9)
+                    ey = wy + rng.uniform(-self.CELL_SIZE*.9, self.CELL_SIZE*.9)
+                    if router.is_open(ex, ey):
+                        player.entities.append(CVEntity(ex, ey, rng.choice(kinds)))
+                        break
+
+        # ---- Vehicle spawn ----
+        if len(player.vehicles) < self.MAX_VEH:
+            n_veh = rng.choice([0, 1, 1, 2, 2, 3, 4, 5, 6, 8])
+            next_id = max((v['id'] for v in player.vehicles), default=0) + 1
+            for k in range(n_veh):
+                for _ in range(20):
+                    vx2 = wx + rng.uniform(-self.CELL_SIZE*.9, self.CELL_SIZE*.9)
+                    vy2 = wy + rng.uniform(-self.CELL_SIZE*.9, self.CELL_SIZE*.9)
+                    if router.is_open(vx2, vy2):
+                        player.vehicles.append({
+                            'id':    next_id + k,
+                            'x':     vx2, 'y': vy2,
+                            'angle': rng.uniform(0, TAU),
+                            'kind':  'vehicle',
+                        })
+                        break
+
+        # ---- Procedural log shard ----
+        if rng.random() < 0.45:   # ~45% of cells drop a log fragment
+            for _ in range(20):
+                lx = wx + rng.uniform(-self.CELL_SIZE*.8, self.CELL_SIZE*.8)
+                ly = wy + rng.uniform(-self.CELL_SIZE*.8, self.CELL_SIZE*.8)
+                if router.is_open(lx, ly):
+                    seed = hash((cx, cy, self._log_seed)) & 0x7FFFFFFF
+                    # 50% chance use static pool, 50% procedural
+                    if rng.random() < 0.5 and LOG_ENTRIES:
+                        entry = rng.choice(LOG_ENTRIES)
+                    else:
+                        entry = _gen_log_entry(seed)
+                    self._log_shards.append([lx, ly, entry, False])
+                    break
+
+    def _check_log_pickups(self, player, px, py):
+        for shard in self._log_shards:
+            if shard[3]: continue
+            if math.hypot(shard[0]-px, shard[1]-py) < self.LOG_RADIUS:
+                shard[3] = True
+                entry = shard[2]
+                if entry not in player.log_entries:
+                    player.log_entries.append(entry)
+                return entry   # caller can show HUD msg
+        return None
+
+    def draw_shards(self, buf, cam, zbuf, W, H):
+        """Draw nearby uncollected log shards as \u2741 glyphs in the raycaster view."""
+        for lx, ly, _, found in self._log_shards:
+            if found: continue
+            dx = lx - cam.pos.x; dy = ly - cam.pos.y
+            inv = cam.plane.x*cam.dir.y - cam.dir.x*cam.plane.y
+            if abs(inv) < 1e-9: continue
+            inv = 1./inv
+            tX  = inv*(cam.dir.y*dx - cam.dir.x*dy)
+            tY  = inv*(-cam.plane.y*dx + cam.plane.x*dy)
+            if tY < .3: continue
+            sx = int(W/2*(1+tX/tY))
+            zi = max(0, min(W-1, sx))
+            if tY < zbuf[zi] and 0 <= sx < W and 0 <= H//2 < H:
+                buf[H//2][sx] = '\u2741'
+
+
 # ================================================================ WORLD ROUTERS
+
 
 class CityRouter:
     STRIDE = 12
@@ -1412,8 +1609,8 @@ class DrivingCamera:
     RPM_IDLE    = 1100.
     RPM_REDLINE = 6800.
     N_GEARS     = 6
-    MAX_FWD     = 11.;  MAX_REV  = -3.5
-    ACCEL       = 7.;   BRAKE    = 14.;  DRAG = 1.6;  STEER = 2.6
+    MAX_FWD     = 44.;  MAX_REV  = -8.0
+    ACCEL       = 18.;  BRAKE    = 32.;  DRAG = 2.2;  STEER = 2.0
     # Camera yaw (look left/right independent of car heading)
     CAM_YAW_SPD = 0.055   # radians per frame
     CAM_YAW_MAX = 1.10    # max yaw offset (about ±63 degrees)
@@ -1547,6 +1744,7 @@ class Player:
         self.board_router=None; self.boarded=None
         self._stash_ent=[]; self._stash_router=None
         self._step_cd=0; self._v_prev=False
+        self.world_bubble=WorldBubble()
 
     def _spawn_space_enemies(self):
         rng=random.Random(WORLD_SEED^0xBADF00D)
@@ -1573,10 +1771,10 @@ class Player:
         pop_mult = rng.randint(3,5) if dense else rng.randint(1,2)
 
         base_count, kinds = {
-            DUNGEON: (8,  ['Z','D','G','B']),
-            CITY:    (6,  ['Z','G','M']),
-            WILDS:   (5,  ['G','Z','S']),
-            MOON:    (3,  ['D','S']),
+            DUNGEON: (20,  ['Z','D','G','B']),
+            CITY:    (16,  ['Z','G','M']),
+            WILDS:   (14,  ['G','Z','S']),
+            MOON:    (8,   ['D','S']),
         }[biome]
         count = base_count * pop_mult
 
@@ -1585,11 +1783,11 @@ class Player:
             self.entities.append(CVEntity(x, y, rng.choice(kinds)))
 
         if biome == DUNGEON:
-            vcount = rng.randint(10,16)
+            vcount = rng.randint(30, 45)
         elif dense:
-            vcount = rng.randint(20,28)
+            vcount = rng.randint(50, 70)
         else:
-            vcount = rng.randint(14,18)
+            vcount = rng.randint(35, 50)
 
         for i in range(vcount):
             x,y = self._safe_pos(self.router, rng)
@@ -1621,7 +1819,7 @@ class Player:
         self.router=make_router(self.biome,s); self.veh_router=make_vehicle_router(self.biome,s)
         ox,oy=self._open_spawn(self.router)
         self.cv.pos=V2(ox,oy); self.cv.dir=V2(-1.,0.); self.cv.plane=V2(0.,.66)
-        self._spawn_ground(planet,self.biome); self.mode=self.FOOT
+        self._spawn_ground(planet,self.biome); self.world_bubble.reset(); self.mode=self.FOOT
 
     def takeoff(self):
         if self.planet:
@@ -1806,6 +2004,7 @@ class CVRenderer:
 
         player.pu_spawner.draw(buf,cam,zbuf,W,H)
         if player.artifact_spawner: player.artifact_spawner.draw(buf,cam,zbuf,W,H)
+        player.world_bubble.draw_shards(buf,cam,zbuf,W,H)
 
         player.particles.draw(buf,W,H)
 
@@ -2330,7 +2529,7 @@ class Game:
                     e.speed=ENEMY_SPD.get(e.char,.02)*speed_mult; e.update(P.cv,P.router)
                 self._check_entity_events()
                 if self.combat and P.cv.health<=0:
-                    self._death_to_space()
+                    self._respawn_foot()
                 P.particles.update(); P.pu_spawner.update()
                 if self.frame%40==0:
                     alive=sum(1 for e in P.entities if e.alive())
@@ -2351,9 +2550,15 @@ class Game:
                 if entry:
                     self._show_msg(">>> ARTIFACT FOUND \u2014 entry added to log [L]")
                     self.audio.play('artifact')
+                # World bubble tick — proximity spawns + log shard pickups
+                shard=P.world_bubble.tick(P)
+                if shard:
+                    self._show_msg(">>> LOG SHARD RECOVERED \u2014 [L] to read")
+                    self.audio.play('artifact')
             self.audio.music.set_mode(BIOME_NAMES.get(P.biome,"OPEN WILDS") if m==P.FOOT else "ENEMY SHIP")
         elif m==P.VEHICLE:
             self._update_vehicle(dt)
+            P.world_bubble.tick(P)
             self.audio.music.set_mode(BIOME_NAMES.get(P.biome,"OPEN WILDS"))
         elif m==P.SPACE:
             for e in P.space_enemies: e.update(P.craft.pos_v3(),dt)
@@ -2362,15 +2567,6 @@ class Game:
             if P.craft.thruster_on and self.frame%25==0: self.audio.play('thruster')
             self.audio.music.set_mode('space')
         self.msg_t=max(0.,self.msg_t-dt)
-        # Auto-regen health and shield every frame (combat and peaceful)
-        if m in (P.FOOT, P.BOARD, P.VEHICLE):
-            cam=P.cv
-            if cam.health < cam.max_health: cam.health=min(cam.max_health, cam.health+0.04)
-            if cam.shield < cam.max_shield: cam.shield=min(cam.max_shield, cam.shield+0.08)
-        elif m==P.SPACE:
-            cam=P.craft
-            if cam.health < cam.max_health: cam.health=min(cam.max_health, cam.health+0.06)
-            if cam.shield < cam.max_shield: cam.shield=min(cam.max_shield, cam.shield+0.10)
 
     def _update_foot(self, dt):
         P=self.player; cam=P.cv; router=P.router
@@ -2481,7 +2677,7 @@ class Game:
                         and e.attack_cd<9999
                         and math.hypot(e.x-P.cv.pos.x,e.y-P.cv.pos.y)<1.2):
                     if P.cv.take_damage(e.dmg//4):
-                        self._death_to_space()
+                        self._respawn_foot()
 
     def _respawn_foot(self):
         P=self.player
@@ -2496,15 +2692,6 @@ class Game:
             ox,oy = P._open_spawn(P.router)
         P.cv.pos=V2(ox,oy); P.cv.health=P.cv.max_health; P.cv.shield=P.cv.max_shield
         P.heat=0.; self._show_msg(">>> DOWN \u2014 RESPAWNING AT CHECKPOINT"); self.audio.play('death')
-
-    def _death_to_space(self):
-        """Combat death: eject player to outer space, reset hp/shield."""
-        P=self.player
-        P.takeoff()
-        P.cv.health=P.cv.max_health; P.cv.shield=P.cv.max_shield
-        P.craft.health=P.craft.max_health; P.craft.shield=P.craft.max_shield
-        P.heat=0.
-        self._show_msg(">>> YOU DIED \u2014 EJECTED TO SPACE"); self.audio.play('death')
 
     def _update_vehicle(self, dt):
         P=self.player; throttle=brake=steer=0.; boost=False
