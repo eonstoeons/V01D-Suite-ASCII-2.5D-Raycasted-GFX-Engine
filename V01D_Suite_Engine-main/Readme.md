@@ -1,13 +1,13 @@
-# V01D Engine 0.3 Alpha
+# V01D Graphics Engine 1.0 Alpha
 
 **“ONE FILE. EVERY APP. FOREVER.”**
 
 A single Python file containing the entire V01D ecosystem:
-17 fully-preserved apps, two real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, an AI code generator,
-an injectible "PyCart / json-cart" system, and a complete SDK for building your own games and tools.
+12 fully-preserved apps (src folder), FOUR real‑time and first-person ASCII, DDS raycasted 2.5D GFX engines, an IDE, coding tool,
+an injectible "PyCart / json-cart" system, creative and utility apps such as Pyamby and Pysplore, and much more.
 
 Database updated with open source knowledge base compiled by Claude AI, as well as a number of public
-domain e-books from Project Gutenberg.
+domain resources, sourced from Project Gutenberg.
 
 **Zero external dependencies — pure Python 3 + tkinter stdlib.**
 Works on Windows, macOS, and Linux.
@@ -29,18 +29,23 @@ That’s it. No pip, no virtualenv, no downloads. Everything is embedded.
 
 ## What’s Inside
 
-### 🎮 Two Real‑Time GFX Engines
+### 🎮 Four Real‑Time GFX Engines
 
 - **Phos City** – night‑drive simulator with infinite procedural ASCII cityscapes, raycaster engine, and full audio synthesis (ambient city soundscape).
 
 - **Void Space** – infinite starfield flight sim with particles, comets, procedural planets, and deep space soundtracks. - Full plane of movement,
-                   6DOF (6 degrees of freedom), fly 360 degrees in any direction infinitely
+                   6DOF (6 degrees of freedom), fly 360 degrees in any direction infinitely.
+
+  - **Cyberv01d FPS** - first person procedurally generated ground exploration and first person shooter. Use your Peace Emitter to provide
+                    stillness to distressed enemies.
+
+    -**Omnivoid** - Standalone Expansion Pack included in EONS OF THE CYBERV01D5: DREAMSCAP3 videogame. A combination of the 3 engines, and then some.
 
 ### 🛠️ SDK & Dev Tools
 
-- **V01D Engine SDK** – complete game‑building SDK on the Phos/Void raycasting core. Build FPS, RPG, racers, 2D platformers, rogue‑likes, and more. Comes with a generic game base, map routers, entity system, missions, audio engine, and PyCart export.
+- **V01D Engine SDK** – experimental game‑building SDK on the Phos/Void raycasting core. Build FPS, RPG, racers, 2D platformers, rogue‑likes, and more. Comes with a generic game base, map routers, entity system, missions, audio engine, and PyCart export.
 
-- **V01D Forge** (v2.0) – an offline AI code generator. Type what you want (Python, C89, x86 assembly), and get complete, runnable code. Includes built‑in templates, self‑test loops, macro recorder, and an offline reference base.
+- **V01D Forge** (v2.0) – an offline code generation project. Type what you want (Python, C89, x86 assembly), and it generates code. Includes built‑in templates, self‑test loops, macro recorder, and an offline reference base.
 
 - **CodeForge Editor** – a white‑phosphor Python editor and file manager with run/export.
 
@@ -59,11 +64,11 @@ That’s it. No pip, no virtualenv, no downloads. Everything is embedded.
 - **Pysplore** - Offline, fully local utility, creation, entertainment suite. Barebones simple OS emulator. Completely local and offline.
                  Includes 10 apps: DAW (music maker), media player, ambience generator, paint tool, journal, clock (with calender, timer,            stopwatch), Calculator, Chess and Checkers (1 or 2 player local), and Solitaire.
                  
-### 🕹️ Games (standalone)
+### 🕹️ Games / Misc (standalone)
 
 - **Klondike Solitaire** - Classic Solitaire
 
-- **ASCII Galaxyfall** - Randomized ASCII starfall generator
+- **ASCII Galaxyfall** - Randomized ASCII starfall generator / wallpaper
 
 ### 📦 PyCart System
 
